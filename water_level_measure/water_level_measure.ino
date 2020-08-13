@@ -13,6 +13,7 @@
 #include "credentials.h"
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
+#include <EEPROM.h>
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -50,6 +51,15 @@ WidgetLCD lcd(V3);
 
 void setup() {
   Serial.begin(9600);
+
+  EEPROM.begin(512);
+
+  EEPROM.get(0, multiplier);
+  EEPROM.get(sizeof(float), offset);
+
+  Serial.println("calibration data stored:");
+  Serial.println("multiplier = " + floatToString(multiplier));
+  Serial.println("offset = " + floatToString(offset));
 
   Blynk.begin(auth, ssid, pass);
   timer.setInterval(1000L, onBlynkTimer);
@@ -122,6 +132,11 @@ BLYNK_WRITE(V1)
       if (calibrationInProgress) {
         multiplier = (valueFromApp - calibrationValueFromApp) / (rawValue - calibrationValueFromScale);
         offset = calibrationValueFromApp - multiplier * calibrationValueFromScale;
+
+        EEPROM.put(0, multiplier);
+        EEPROM.put(sizeof(float), offset);
+        EEPROM.commit();
+
         calibrationInProgress = false;
         writeCalibrationInfoToLCD();
       }
